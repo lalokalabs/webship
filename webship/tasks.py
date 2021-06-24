@@ -16,6 +16,8 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 """
 
+import os
+
 from invoke import task
 
 @task
@@ -30,16 +32,22 @@ def fetch(c, repo=None, clone_args=""):
     c.run("mkdir -p build")
     with c.cd("build"):
         c.run(f"git clone {clone_args} {repo}")
+        name = c.webship["main"]["name"]
+        if "command" in c.webship["fetch"]:
+            with c.cd(f"{name}"):
+                c.run(c.webship["fetch"]["command"])
 
 @task
 def build(c, project_name, version, docker_image="python:3.8"):
     repo_path = "$PWD"
     build_opts = ""
+    command = c.webship["build"]["command"]
     deploy_path = f"/app/releases/{project_name}-{version}"
     docker_cmd = (f"podman run --rm -i -t -v {repo_path}:{deploy_path} {docker_image} "
                   f"/bin/bash -c 'cd {deploy_path} && rm -rf .venv && "
-                  f"poetry install'")
+                  f"{command}'")
     print(docker_cmd)
+    c.run(c.webship["build"]["pre_command"])
     with c.cd(f"build/{project_name}"):
         ret = c.run(docker_cmd)
 
@@ -50,16 +58,24 @@ def build(c, project_name, version, docker_image="python:3.8"):
 
 @task
 def run(c, project_name, version, cmd, env_file=None, docker_image="python:3.8"):
+    if env_file is not None:
+        fp = open(env_file)
+        env_file = os.path.realpath(fp.name)
+
     tarball_name = f"{project_name}-{version}.tar.gz"
     deploy_path = f"/app/releases"
+    cmd_prefix = ""
+    if not cmd.startswith("/"):
+        cmd_prefix = f"{deploy_path}/{project_name}-{version}"
     docker_cmd = (f"podman run --rm -i -t -v $PWD:/build "
                   f"-e tarball_name={tarball_name} -e deploy_path={deploy_path} --env-file={env_file} "
-                  f"-e project_name={project_name} -e version={version} {docker_image} "
+                  f"-e project_name={project_name} -e version={version} "
+                  f"-p 8000:8000 "
+                  f"{docker_image} "
                   f"/bin/bash -c 'cd /build && ls && tar xzf {tarball_name} && mkdir -p {deploy_path} && "
                   f"mv {project_name} {project_name}-{version} && "
                   f"mv {project_name}-{version} {deploy_path} && "
-                  #f"/bin/bash'")
-                  f"{deploy_path}/{project_name}-{version}/{cmd}'")
+                  f"{cmd_prefix}/{cmd}'")
     with c.cd("build"):
         print(docker_cmd)
         ret = c.run(docker_cmd, pty=True)

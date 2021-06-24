@@ -5,7 +5,8 @@ from invoke import Collection, Program
 from invoke.util import yaml
 from webship import tasks
 
-config = configparser.ConfigParser()
+interpolation = configparser.ExtendedInterpolation()
+config = configparser.ConfigParser(interpolation=interpolation)
 try:
     config.read("webship.ini")
 except Exception as e:
