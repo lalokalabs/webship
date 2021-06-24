@@ -17,6 +17,11 @@ Create `webship.ini` to hold configuration about the deploy:-
 [fetch]
 repo = git@github.com:xoxzoeu/myapp.git
 clone_args = recursive
+command = sh get-externals.sh
+
+[build]
+pre_command = cp {poetry.toml,key.txt} build/${main:name}
+command = poetry install && npm install && npm run dev
 
 [deploy]
 path = /app/myapp
@@ -24,6 +29,9 @@ hosts =
     127.0.0.1
     127.0.0.2
 ```
+
+Notes:-
+During build `pre_command` is running outside container while `command` running inside container.
 
 To build the app:-
 
