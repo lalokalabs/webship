@@ -42,7 +42,7 @@ def build(c, project_name, version, docker_image="python:3.8"):
     repo_path = "$PWD"
     build_opts = ""
     command = c.webship["build"]["command"]
-    deploy_path = f"/app/releases/{project_name}-{version}"
+    deploy_path = f"/app/{project_name}/releases/{project_name}-{version}"
     docker_cmd = (f"podman run --rm -i -t -v {repo_path}:{deploy_path} {docker_image} "
                   f"/bin/bash -c 'cd {deploy_path} && rm -rf .venv && "
                   f"{command}'")
@@ -63,7 +63,7 @@ def run(c, project_name, version, cmd, env_file=None, docker_image="python:3.8")
         env_file = os.path.realpath(fp.name)
 
     tarball_name = f"{project_name}-{version}.tar.gz"
-    deploy_path = f"/app/releases"
+    deploy_path = f"/app/{project_name}/releases"
     cmd_prefix = ""
     if not cmd.startswith("/"):
         cmd_prefix = f"{deploy_path}/{project_name}-{version}"
