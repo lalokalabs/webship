@@ -5,8 +5,8 @@ description = "Tools to deploy python web application"
 authors = ["kamal <kamal@xoxzo.com>"]
 license = "MIT"
 readme = "README.md"
-homepage = https://github.com/xoxzo/webship
-repository = https://github.com/xoxzo/webship
+homepage = "https://github.com/xoxzo/webship"
+repository = "https://github.com/xoxzo/webship"
 
 [tool.poetry.dependencies]
 python = "^3.8"
