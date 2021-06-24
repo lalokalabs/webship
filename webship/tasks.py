@@ -57,7 +57,9 @@ def build(c, project_name, version, docker_image="python:3.8"):
         c.run(f"tar czf {tarball_name} {excludes} {project_name}")
 
 @task
-def run(c, project_name, version, cmd, env_file=None, docker_image="python:3.8"):
+def run(c, tarball, cmd, env_file=None, docker_image="python:3.8"):
+    project_name, version = tarball.split("/")[-1].split("-")
+    version = version.strip(".tar.gz")
     if env_file is not None:
         fp = open(env_file)
         env_file = os.path.realpath(fp.name)
