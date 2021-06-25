@@ -19,6 +19,14 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 import os
 
 from invoke import task
+from fabric2 import Connection
+from fabric2 import SerialGroup
+
+def confirm(prompt="Proceed?", answer="Y", cancel="n"):
+    if input(f"{prompt} [{answer}/{cancel}] ") == answer:
+        return True
+
+    return False
 
 @task
 def fetch(c, repo=None, clone_args=""):
@@ -84,6 +92,33 @@ def run(c, tarball, cmd, env_file=None, docker_image="python:3.8"):
         print(ret)
 
 @task
-def deploy(c):
-    breakpoint()
-    print("Running integration tests!")
+def deploy(c, tarball):
+    tarball_path = os.path.realpath(open(tarball).name)
+    print(tarball_path)
+    hosts = ",".join(c.webship["deploy"]["hosts"].split())
+    project_name, version = tarball_path.split("/")[-1].split("-")
+    deploy_path = f"/app/{project_name}/releases"
+    filename = tarball_path.split("/")[-1]
+    version = version.strip(".tar.gz")
+    print(tarball_path, deploy_path, project_name, version, filename)
+
+    def upload_and_unpack(c):
+        #if c.run('test -f /opt/mydata/myfile', warn=True).failed:
+        print(f"Copying {tarball_path} to {c.host} ...")
+        c.put(tarball_path)
+        target_dir = f"{deploy_path}/{project_name}-{version}"
+        print(f"Checking {target_dir} exists...")
+        if not c.run(f"test -d {target_dir}", warn=True).failed:
+            print(f"{target_dir} exists")
+            if not confirm():
+                return
+        print(f"Extracting tarball to {target_dir}")
+        c.sudo(f"tar -C {deploy_path} -xzvf {filename}", hide=True)
+        print(f"Deleting existing {target_dir}")
+        c.sudo(f"rm -r {target_dir}")
+        c.sudo(f"mv {deploy_path}/{project_name} {deploy_path}/{project_name}-{version}")
+        print("copying env file")
+        c.put("env", f"{target_dir}/.env")
+
+    for connection in SerialGroup(hosts):
+        upload_and_unpack(connection)
