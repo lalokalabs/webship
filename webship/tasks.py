@@ -46,28 +46,39 @@ def fetch(c, repo=None, clone_args=""):
                 c.run(c.webship["fetch"]["command"])
 
 @task
-def build(c, project_name, version, docker_image="python:3.8"):
+def build(c, project_name, version, docker_image="python:3.8", from_branch=False):
     repo_path = "$PWD"
     build_opts = ""
+    git_ref = version if from_branch else f"{project_name}-{version}"
+    target_dir = f"{project_name}-{version}"
     command = c.webship["build"]["command"]
-    deploy_path = f"/app/{project_name}/releases/{project_name}-{version}"
+    deploy_path = f"/app/{project_name}/releases/{target_dir}"
     docker_cmd = (f"podman run --rm -i -t -v {repo_path}:{deploy_path} {docker_image} "
                   f"/bin/bash -c 'cd {deploy_path} && rm -rf .venv && "
                   f"{command}'")
     print(docker_cmd)
     c.run(c.webship["build"]["pre_command"])
     with c.cd(f"build/{project_name}"):
+        c.run(f"git checkout {git_ref}")
         ret = c.run(docker_cmd)
 
     excludes = "--exclude=.git"
-    tarball_name = f"{project_name}-{version}.tar.gz"
+    tarball_name = f"{target_dir}.tar.gz"
     with c.cd("build"):
         c.run(f"tar czf {tarball_name} {excludes} {project_name}")
 
-@task
-def run(c, tarball, cmd, env_file=None, docker_image="python:3.8"):
-    project_name, version = tarball.split("/")[-1].split("-")
+def _get_project_and_version_from_tarball(tarball, from_branch):
+    if from_branch:
+        project_name, *version = tarball.split("/")[-1].split("-")
+        version = "-".join(version)
+    else:
+        project_name, version = tarball.split("/")[-1].split("-")
     version = version.strip(".tar.gz")
+    return project_name, version
+
+@task
+def run(c, tarball, cmd, env_file=None, docker_image="python:3.8", from_branch=False):
+    project_name, version = _get_project_and_version_from_tarball(tarball, from_branch)
     if env_file is not None:
         fp = open(env_file)
         env_file = os.path.realpath(fp.name)
@@ -92,14 +103,13 @@ def run(c, tarball, cmd, env_file=None, docker_image="python:3.8"):
         print(ret)
 
 @task
-def deploy(c, tarball):
+def deploy(c, tarball, from_branch=False):
+    project_name, version = _get_project_and_version_from_tarball(tarball, from_branch)
     tarball_path = os.path.realpath(open(tarball).name)
     print(tarball_path)
     hosts = ",".join(c.webship["deploy"]["hosts"].split())
-    project_name, version = tarball_path.split("/")[-1].split("-")
     deploy_path = f"/app/{project_name}/releases"
     filename = tarball_path.split("/")[-1]
-    version = version.strip(".tar.gz")
     print(tarball_path, deploy_path, project_name, version, filename)
 
     def upload_and_unpack(c):
@@ -112,10 +122,10 @@ def deploy(c, tarball):
             print(f"{target_dir} exists")
             if not confirm():
                 return
+            print(f"Deleting existing {target_dir}")
+            c.sudo(f"rm -r {target_dir}")
         print(f"Extracting tarball to {target_dir}")
         c.sudo(f"tar -C {deploy_path} -xzvf {filename}", hide=True)
-        print(f"Deleting existing {target_dir}")
-        c.sudo(f"rm -r {target_dir}")
         c.sudo(f"mv {deploy_path}/{project_name} {deploy_path}/{project_name}-{version}")
         print("copying env file")
         c.put("env", f"{target_dir}/.env")
