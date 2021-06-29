@@ -103,14 +103,18 @@ def run(c, tarball, cmd, env_file=None, docker_image="python:3.8", from_branch=F
         print(ret)
 
 @task
-def deploy(c, tarball, from_branch=False):
+def deploy(c, tarball, target, from_branch=False):
     project_name, version = _get_project_and_version_from_tarball(tarball, from_branch)
     tarball_path = os.path.realpath(open(tarball).name)
     print(tarball_path)
-    hosts = ",".join(c.webship["deploy"]["hosts"].split())
+    hosts = ",".join(c.webship[f"deploy.{target}"]["hosts"].split())
     deploy_path = f"/app/{project_name}/releases"
     filename = tarball_path.split("/")[-1]
     print(tarball_path, deploy_path, project_name, version, filename)
+
+    if not confirm(f"Deploy to {target}: {hosts}?"):
+        print("Abort")
+        return
 
     def upload_and_unpack(c):
         #if c.run('test -f /opt/mydata/myfile', warn=True).failed:
@@ -127,8 +131,8 @@ def deploy(c, tarball, from_branch=False):
         print(f"Extracting tarball to {target_dir}")
         c.sudo(f"tar -C {deploy_path} -xzvf {filename}", hide=True)
         c.sudo(f"mv {deploy_path}/{project_name} {deploy_path}/{project_name}-{version}")
-        print("copying env file")
-        c.put("env", f"{target_dir}/.env")
+        print(f"copying env.{target} file")
+        c.put(f"env.{target}", f"{target_dir}/.env")
 
     for connection in SerialGroup(hosts):
         upload_and_unpack(connection)
