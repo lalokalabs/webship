@@ -138,19 +138,19 @@ def deploy(c, tarball, target, from_branch=False):
         upload_and_unpack(connection)
 
 @task
-def sync_etc(c, filename="*", post_command=""):
+def sync_etc(c, target, filename="*", post_command=""):
     import glob
     post_command_from_ini = c.webship["deploy"].get("post_command", "")
     if post_command_from_ini:
         post_command = post_command_from_ini
-    hosts = c.webship["deploy"]["hosts"].split()
+    hosts = c.webship[f"deploy.{target}"]["hosts"].split()
     def upload_and_copy(c, file_):
-        file_ = "/" + file_.lstrip("/")
+        file_target = "/" + file_.lstrip("/")
         print(f"Uploading {file_} to {c.host}")
         c.put(file_)
         filename_only = file_.split("/")[-1]
-        print(f"Copying {filename_only} to {file_}")
-        c.sudo(f"mv {filename_only} {file_}")
+        print(f"Copying {filename_only} to {file_target}")
+        c.sudo(f"mv {filename_only} {file_target}")
 
     filename = "etc/*" if filename == "*" else filename
     for file_ in glob.glob(filename, recursive=True):
