@@ -103,7 +103,7 @@ def run(c, tarball, cmd, env_file=None, docker_image="python:3.8", from_branch=F
         print(ret)
 
 @task
-def deploy(c, tarball, target, from_branch=False):
+def deploy(c, tarball, target, from_branch=False, env_only=False):
     project_name, version = _get_project_and_version_from_tarball(tarball, from_branch)
     tarball_path = os.path.realpath(open(tarball).name)
     print(tarball_path)
@@ -116,11 +116,10 @@ def deploy(c, tarball, target, from_branch=False):
         print("Abort")
         return
 
+    target_dir = f"{deploy_path}/{project_name}-{version}"
     def upload_and_unpack(c):
-        #if c.run('test -f /opt/mydata/myfile', warn=True).failed:
         print(f"Copying {tarball_path} to {c.host} ...")
         c.put(tarball_path)
-        target_dir = f"{deploy_path}/{project_name}-{version}"
         print(f"Checking {target_dir} exists...")
         if not c.run(f"test -d {target_dir}", warn=True).failed:
             print(f"{target_dir} exists")
@@ -135,7 +134,11 @@ def deploy(c, tarball, target, from_branch=False):
         c.put(f"env.{target}", f"{target_dir}/.env")
 
     for connection in SerialGroup(hosts):
-        upload_and_unpack(connection)
+        if env_only:
+            print(f"copying env.{target} file")
+            connection.put(f"env.{target}", f"{target_dir}/.env")
+        else:
+            upload_and_unpack(connection)
 
 @task
 def sync_etc(c, target, filename="*", post_command=""):
