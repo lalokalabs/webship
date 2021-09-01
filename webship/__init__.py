@@ -18,6 +18,7 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 import os
 import configparser
+import pkg_resources
 
 from invoke import Collection, Program
 from invoke.util import yaml
@@ -34,4 +35,4 @@ except Exception as e:
 print(config)
 ns = Collection.from_module(tasks)
 ns.configure({"webship": {s:dict(config.items(s)) for s in config.sections()}})
-program = Program(namespace=ns, version='0.1.0')
+program = Program(namespace=ns, version=pkg_resources.get_distribution('webship').version)
