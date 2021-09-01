@@ -34,4 +34,4 @@ except Exception as e:
 print(config)
 ns = Collection.from_module(tasks)
 ns.configure({"webship": {s:dict(config.items(s)) for s in config.sections()}})
-program = Program(namespace=ns, version='0.1.0')
+program = Program(namespace=ns, version='0.1.2')
