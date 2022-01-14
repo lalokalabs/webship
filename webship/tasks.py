@@ -46,14 +46,18 @@ def fetch(c, repo=None, clone_args=""):
                 c.run(c.webship["fetch"]["command"])
 
 @task
-def build(c, project_name, version, docker_image="python:3.8", from_branch=False):
+def build(c, project_name, version, docker_image="python:3.8", from_branch=False, env_file=None):
+    if env_file is not None:
+        fp = open(env_file)
+        env_file = os.path.realpath(fp.name)
+
     repo_path = "$PWD"
     build_opts = ""
     git_ref = version if from_branch else f"{project_name}-{version}"
     target_dir = f"{project_name}-{version}"
     command = c.webship["build"]["command"]
     deploy_path = f"/app/{project_name}/releases/{target_dir}"
-    docker_cmd = (f"podman run --rm -i -t -v {repo_path}:{deploy_path} {docker_image} "
+    docker_cmd = (f"podman run --rm -i -t -v {repo_path}:{deploy_path} --env-file={env_file} {docker_image} "
                   f"/bin/bash -c 'cd {deploy_path} && rm -rf .venv && "
                   f"{command}'")
     print(docker_cmd)
