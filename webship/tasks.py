@@ -77,7 +77,7 @@ def _get_project_and_version_from_tarball(tarball, from_branch):
         version = "-".join(version)
     else:
         project_name, version = tarball.split("/")[-1].split("-")
-    version = version.strip(".tar.gz")
+    version = version[0:-7]
     return project_name, version
 
 @task
