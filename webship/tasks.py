@@ -81,7 +81,8 @@ def _get_project_and_version_from_tarball(tarball, from_branch):
     return project_name, version
 
 @task
-def run(c, tarball, cmd, env_file=None, docker_image="python:3.8", from_branch=False):
+def run(c, tarball, cmd, env_file=None, docker_image="python:3.8",
+        port="8000", from_branch=False):
     project_name, version = _get_project_and_version_from_tarball(tarball, from_branch)
     if env_file is not None:
         fp = open(env_file)
@@ -95,7 +96,7 @@ def run(c, tarball, cmd, env_file=None, docker_image="python:3.8", from_branch=F
     docker_cmd = (f"podman run --rm -i -t -v $PWD:/build "
                   f"-e tarball_name={tarball_name} -e deploy_path={deploy_path} --env-file={env_file} "
                   f"-e project_name={project_name} -e version={version} "
-                  f"-p 8000:8000 "
+                  f"-p {port}:{port} "
                   f"{docker_image} "
                   f"/bin/bash -c 'cd /build && ls && tar xzf {tarball_name} && mkdir -p {deploy_path} && "
                   f"mv {project_name} {project_name}-{version} && "
