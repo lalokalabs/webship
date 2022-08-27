@@ -90,9 +90,6 @@ def run(c, tarball, cmd, env_file=None, docker_image="python:3.8",
 
     tarball_name = f"{project_name}-{version}.tar.gz"
     deploy_path = f"/app/{project_name}/releases"
-    cmd_prefix = ""
-    if not cmd.startswith("/"):
-        cmd_prefix = f"{deploy_path}/{project_name}-{version}"
     docker_cmd = (f"podman run --rm -i -t -v $PWD:/build "
                   f"-e tarball_name={tarball_name} -e deploy_path={deploy_path} --env-file={env_file} "
                   f"-e project_name={project_name} -e version={version} "
@@ -101,7 +98,8 @@ def run(c, tarball, cmd, env_file=None, docker_image="python:3.8",
                   f"/bin/bash -c 'cd /build && ls && tar xzf {tarball_name} && mkdir -p {deploy_path} && "
                   f"mv {project_name} {project_name}-{version} && "
                   f"mv {project_name}-{version} {deploy_path} && "
-                  f"{cmd_prefix}/{cmd}'")
+                  f"cd {deploy_path}/{project_name}-{version} && "
+                  f"{cmd}'")
     with c.cd("build"):
         print(docker_cmd)
         ret = c.run(docker_cmd, pty=True)
