@@ -135,7 +135,7 @@ def deploy(c, tarball, target, from_branch=False, env_only=False):
         c.sudo(f"tar -C {deploy_path} --no-same-owner -xzvf {filename}", hide=True)
         c.sudo(f"mv {deploy_path}/{project_name} {deploy_path}/{project_name}-{version}")
 
-        # Add this line to change ownership from 
+        # Add this line to change ownership from root to the current user
         current_user = c.run("whoami", hide=True).stdout.strip()
         print(f"Fixing ownership to {current_user} user")
         c.sudo(f"chown -R {current_user}:{current_user} {target_dir}")
