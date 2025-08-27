@@ -64,7 +64,7 @@ def build(c, project_name, version, docker_image="python:3.8", from_branch=False
     c.run(c.webship["build"]["pre_command"])
     with c.cd(f"build/{project_name}"):
         c.run(f"git checkout {git_ref}")
-        ret = c.run(docker_cmd)
+        ret = c.run(docker_cmd, pty=True)
 
     excludes = "--exclude=.git"
     tarball_name = f"{target_dir}.tar.gz"
